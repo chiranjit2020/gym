@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workout Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.3/jquery-ui.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.3/themes/ui-lightness/jquery-ui.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui-touch-punch/0.2.3/jquery.ui.touch-punch.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Manrope', sans-serif;
+            background: linear-gradient(135deg, #0c0c0c 0%, #0c0c0c 50%, #0b0b0c 100%);
+            min-height: 100vh;
+        }
+        
+        .glass {
+            background: rgba(56, 56, 56, 0.05);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.3s ease;
+        }
+        
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.12);
+            transform: translateY(-1px);
+        }
+
+        .exercise-accordion {
+            margin-bottom: 8px;
+        }
+        
+        .accordion-header {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            cursor: pointer;
+            border-radius: 8px;
+            background: rgba(56, 56, 56, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.2s ease;
+        }
+        
+        .accordion-header:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+        
+        .accordion-header.active {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: rgba(59, 130, 246, 0.3);
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+        
+        .accordion-content {
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-top: none;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+        
+        .drag-handle {
+            cursor: grab;
+            padding: 4px;
+            margin-right: 8px;
+            opacity: 0.6;
+            flex-shrink: 0;
+        }
+        
+        .drag-handle:hover {
+            opacity: 1;
+        }
+        
+        .drag-icon {
+            width: 20px;
+            height: 20px;
+            background-image: url('data:image/svg+xml;utf8,<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="5" r="1" fill="white"/><circle cx="9" cy="12" r="1" fill="white"/><circle cx="9" cy="19" r="1" fill="white"/><circle cx="15" cy="5" r="1" fill="white"/><circle cx="15" cy="12" r="1" fill="white"/><circle cx="15" cy="19" r="1" fill="white"/></svg>');
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+        
+        .ui-sortable-helper {
+            opacity: 0.8;
+            transform: rotate(2deg);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+        
+        .ui-sortable-placeholder {
+            background: rgba(59, 130, 246, 0.2) !important;
+            border: 2px dashed rgba(59, 130, 246, 0.5) !important;
+            visibility: visible !important;
+            height: 60px !important;
+            margin: 4px 0;
+            border-radius: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+        
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            transform: translateY(-1px);
+        }
+        
+        .day-header {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+        }
+
+        .current-day {
+            background: linear-gradient(135deg, #10b981, #059669);
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+        }
+
+        .close-icon {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        
+        .close-icon:hover {
+            opacity: 1;
+        }
+        
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+        }
+        
+        .editable-header {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .editable-header:hover {
+            transform: scale(1.02);
+            background: rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="text-white" x-data="workoutApp()">
+    <div class="min-h-screen p-4">
+        <!-- Header -->
+        <div class="glass rounded-xl p-6 mb-6 editable-header" @click="showUserProfile = true">
+            <h1 class="text-2xl font-bold text-center bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2" x-text="userProfile.programName"></h1>
+            <div class="text-center text-gray-300 text-sm">
+                <p x-text="`Weight: ${userProfile.weight} | Height: ${userProfile.height} | Age: ${userProfile.age} | Goal: ${userProfile.goal}`"></p>
+                <p class="text-green-400 mt-1" x-text="'Today: ' + getCurrentDay() + (activeDay === getCurrentDay() ? ' (Current)' : '')"></p>
+                <p class="text-gray-400 text-xs mt-1">Tap to edit profile</p>
+            </div>
+        </div>
+
+        <!-- Day Selection -->
+        <div class="glass rounded-xl p-4 mb-6">
+            <div class="flex flex-wrap gap-2 justify-center">
+                <template x-for="day in schedule" :key="day.day">
+                    <button 
+                        @click="activeDay = day.day; saveToStorage()"
+                        :class="[
+                            activeDay === day.day ? 'day-header' : 'glass-card',
+                            getCurrentDay() === day.day ? 'current-day' : ''
+                        ]"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                        x-text="day.day"
+                    ></button>
+                </template>
+            </div>
+        </div>
+
+        <!-- Current Day Workout -->
+        <template x-for="day in schedule" :key="day.day">
+            <div x-show="activeDay === day.day" class="space-y-4">
+                <!-- Day Header -->
+                <div class="glass rounded-xl p-6 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-left mb-2" x-text="day.day"></h2>
+                        <p class="text-sm text-center text-blue-300 font-medium" x-text="day.focus"></p>                        
+                    </div>
+
+                    <div class="flex justify-center">
+                        <button 
+                            @click="showAddExercise = true; newExercise.day = day.day"
+                            class="text-sm btn-primary px-4 py-2 rounded-lg font-medium flex items-center gap-2"
+                        >
+                            <span class="text-lg">+</span> Add Exercise
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Exercises List -->
+                <div class="exercise-container" :data-day="day.day">
+                    <template x-for="(exercise, index) in day.exercises" :key="exercise.id">
+                        <div class="exercise-accordion" :data-exercise-id="exercise.id">
+                            <!-- Accordion Header -->
+                            <div class="accordion-header" :class="{'active': accordionOpen[exercise.id]}" @click="toggleAccordion(exercise.id)">
+                                <div class="drag-handle">
+                                    <div class="drag-icon"></div>
+                                </div>
+                                <div class="flex-1 flex justify-between items-center">
+                                    <h3 class="font-medium text-sm text-white truncate pr-2" x-text="exercise.name"></h3>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm text-gray-300" x-text="`${exercise.sets} sets`"></span>
+                                        <div class="close-icon" x-show="accordionOpen[exercise.id]" @click.stop="toggleAccordion(exercise.id)">
+                                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Accordion Content -->
+                            <div class="accordion-content" x-show="accordionOpen[exercise.id]" x-transition>
+                                <div class="grid grid-cols-2 gap-3 mb-3">
+                                    <div>
+                                        <label class="text-xs text-gray-400 mb-1 block">Sets</label>
+                                        <input 
+                                            type="number" 
+                                            x-model="exercise.sets"
+                                            @input="saveToStorage()"
+                                            class="w-full bg-white/10 border border-white/20 rounded-md px-3 py-2 text-white focus:outline-none focus:border-blue-400 text-sm"
+                                            min="1"
+                                        >
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-400 mb-1 block">Reps</label>
+                                        <input 
+                                            type="text" 
+                                            :value="exercise.reps_range || exercise.reps || exercise.duration_sec || ''"
+                                            @input="updateReps(exercise, $event.target.value)"
+                                            class="w-full bg-white/10 border border-white/20 rounded-md px-3 py-2 text-white focus:outline-none focus:border-blue-400 text-sm"
+                                            placeholder="8-12"
+                                        >
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="text-xs text-gray-400 mb-1 block">Equipment</label>
+                                    <input 
+                                        type="text" 
+                                        x-model="exercise.equipment"
+                                        @input="saveToStorage()"
+                                        class="w-full bg-white/10 border border-white/20 rounded-md px-3 py-2 text-white focus:outline-none focus:border-blue-400 text-sm"
+                                        placeholder="Equipment needed"
+                                    >
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="text-xs text-gray-400 mb-1 block">Notes</label>
+                                    <textarea 
+                                        x-model="exercise.notes"
+                                        @input="saveToStorage()"
+                                        class="w-full bg-white/10 border border-white/20 rounded-md px-3 py-2 text-white focus:outline-none focus:border-blue-400 text-sm"
+                                        rows="2"
+                                        placeholder="Exercise notes..."
+                                    ></textarea>
+                                </div>
+                                
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span x-show="exercise.equipment" class="text-xs bg-blue-600/30 text-blue-300 px-2 py-1 rounded-md font-medium" x-text="exercise.equipment"></span>
+                                        <span x-show="exercise.warmup" class="text-xs bg-orange-600/30 text-orange-300 px-2 py-1 rounded-md font-medium">Warmup</span>
+                                    </div>
+                                    <button 
+                                        @click="removeExercise(day.day, index)"
+                                        class="btn-danger px-3 py-1 rounded-md text-xs font-medium"
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    
+                    <div x-show="day.exercises.length === 0" class="text-center py-8 text-gray-400">
+                        <p class="text-sm">No exercises yet. Click "Add Exercise" to get started!</p>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- First Time Setup Modal -->
+        <div x-show="showFirstTimeSetup" class="fixed inset-0 modal-overlay flex items-center justify-center p-4 z-50" x-cloak>
+            <div class="glass rounded-xl p-6 w-full max-w-md">
+                <h3 class="text-2xl font-bold mb-2 text-center">Welcome!</h3>
+                <p class="text-sm text-gray-300 text-center mb-6">Set up your profile to get started</p>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Your Name</label>
+                        <input 
+                            type="text" 
+                            x-model="userProfile.userName"
+                            class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-400 text-sm"
+                            placeholder="Enter your name"
+                        >
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Program Name</label>
+                        <input 
+                            type="text" 
+                            x-model="userProfile.programName"
+                            class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-400 text-sm"
+                            placeholder="Name your workout program"
+                        >
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Weight</label>
+                            <input 
+                                type="text" 
+                                x-model="userProfile.weight"
+                                class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-400 text-sm"
+                                placeholder="80kg"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Height</label>
+                            <input 
+                                type="text" 
+                                x-model="userProfile.height"
+                                class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-400 text-sm"
+                                placeholder="5'6&quot;"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Age</label>
+                            <input 
+                                type="text" 
+                                x-model="userProfile.age"
+                                class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-400 text-sm"
+                                placeholder="35"
+                            >
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Goal</label>
+                        <select 
+                            x-model="userProfile.goal"
+                            class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-400 text-sm"
+                        >
+                            <option value="Muscular Hypertrophy" class="bg-gray-800">Muscular Hypertrophy</option>
+                            <option value="Strength Building" class="bg-gray-800">Strength Building</option>
+                            <option value="Weight Loss" class="bg-gray-800">Weight Loss</option>
+                            <option value="Endurance" class="bg-gray-800">Endurance</option>
+                            <option value="General Fitness" class="bg-gray-800">General Fitness</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mt-6">
+                    <button 
+                        @click="completeFirstTimeSetup()"
+                        class="btn-primary w-full py-3 rounded-lg font-bold text-lg text-white"
+                    >
+                        Get Started!
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Profile Modal -->
+        <div x-show="showUserProfile" class="fixed inset-0 modal-overlay flex items-center justify-center p-4 z-50" x-cloak>
+            <div class="glass rounded-xl p-6 w-full max-w-md">
+                <h3 class="text-xl font-bold mb-4">Edit Profile</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Your Name</label>
+                        <input 
+                            type="text" 
+                            x-model="userProfile.userName"
+                            class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-400 text-sm"
+                        >
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Program Name</label>
+                        <input 
+                            type="text" 
+                            x-model="userProfile.programName"
+                            class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-400 text-sm"
+                        >
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Weight</label>
+                            <input type="text" x-model="userProfile.weight" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-400 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Height</label>
+                            <input type="text" x-model="userProfile.height" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-400 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Age</label>
+                            <input type="text" x-model="userProfile.age" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-400 text-sm">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Goal</label>
+                        <select x-model="userProfile.goal" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-400 text-sm">
+                            <option value="Muscular Hypertrophy" class="bg-gray-800">Muscular Hypertrophy</option>
+                            <option value="Strength Building" class="bg-gray-800">Strength Building</option>
+                            <option value="Weight Loss" class="bg-gray-800">Weight Loss</option>
+                            <option value="Endurance" class="bg-gray-800">Endurance</option>
+                            <option value="General Fitness" class="bg-gray-800">General Fitness</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 mt-6">
+                    <button @click="saveUserProfile()" class="btn-primary flex-1 py-2 rounded-lg font-medium">Save Profile</button>
+                    <button @click="showUserProfile = false" class="glass-card flex-1 py-2 rounded-lg font-medium">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Exercise Modal -->
+        <div x-show="showAddExercise" class="fixed inset-0 modal-overlay flex items-center justify-center p-4 z-50" x-cloak>
+            <div class="glass rounded-xl p-6 w-full max-w-md">
+                <h3 class="text-xl font-bold mb-4">Add New Exercise</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Exercise Name</label>
+                        <input type="text" x-model="newExercise.name" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-400 text-sm" placeholder="Enter exercise name">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Sets</label>
+                            <input type="number" x-model="newExercise.sets" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-400 text-sm" min="1">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Reps</label>
+                            <input type="text" x-model="newExercise.reps_range" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-400 text-sm" placeholder="8-12">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Equipment</label>
+                        <input type="text" x-model="newExercise.equipment" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-400 text-sm" placeholder="dumbbells, barbell, etc.">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Notes</label>
+                        <textarea x-model="newExercise.notes" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-400 text-sm" rows="2" placeholder="Exercise notes..."></textarea>
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 mt-6">
+                    <button @click="addExercise()" class="btn-primary flex-1 py-2 rounded-lg font-medium">Add Exercise</button>
+                    <button @click="showAddExercise = false; resetNewExercise()" class="glass-card flex-1 py-2 rounded-lg font-medium">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function workoutApp() {
+            return {
+                activeDay: 'Wednesday',
+                showAddExercise: false,
+                showUserProfile: false,
+                showFirstTimeSetup: false,
+                accordionOpen: {},
+                userProfile: {
+                    userName: 'Codeworm',
+                    programName: 'Codeworm 6-Day Hypertrophy Program',
+                    weight: '80kg',
+                    height: '5\'6"',
+                    age: '35',
+                    goal: 'Muscular Hypertrophy'
+                },
+                newExercise: {
+                    name: '',
+                    sets: 3,
+                    reps_range: '8-12',
+                    equipment: '',
+                    notes: '',
+                    day: ''
+                },
+                schedule: [
+                    {
+                        day: "Wednesday",
+                        focus: "Chest + Triceps",
+                        exercises: [
+                            { id: "w1", name: "Push Ups", warmup: true, sets: 2, reps: "15", equipment: "bodyweight", notes: "General warm-up" },
+                            { id: "w2", name: "Flat Barbell Bench Press", sets: 4, reps_range: "6-10", equipment: "barbell/bench", notes: "Progressive overload priority" },
+                            { id: "w3", name: "Incline Dumbbell Press", sets: 4, reps_range: "8-12", equipment: "dumbbells/bench", notes: "Upper-chest emphasis" },
+                            { id: "w4", name: "Low Cable Fly", sets: 3, reps_range: "10-12", equipment: "cable", notes: "Focus on squeeze" }
+                        ]
+                    },
+                    {
+                        day: "Thursday",
+                        focus: "Back + Biceps",
+                        exercises: [
+                            { id: "t1", name: "Pull-ups", sets: 4, reps_range: "6-10", equipment: "bodyweight", notes: "Primary vertical pull" },
+                            { id: "t2", name: "Lat Pulldown", sets: 3, reps_range: "8-12", equipment: "machine", notes: "Vertical width work" },
+                            { id: "t3", name: "Barbell Row", sets: 4, reps_range: "8-12", equipment: "barbell", notes: "Horizontal pull" }
+                        ]
+                    },
+                    {
+                        day: "Friday",
+                        focus: "Shoulders + Abs",
+                        exercises: [
+                            { id: "f1", name: "Overhead Press", warmup: true, sets: 4, reps_range: "6-10", equipment: "barbell", notes: "Primary shoulder compound" },
+                            { id: "f2", name: "Lateral Raise", sets: 4, reps_range: "10-12", equipment: "dumbbells", notes: "Middle delt isolation" },
+                            { id: "f3", name: "Plank", sets: 3, duration_sec: 60, equipment: "bodyweight", notes: "Core stability" }
+                        ]
+                    },
+                    {
+                        day: "Saturday",
+                        focus: "Legs",
+                        exercises: [
+                            { id: "s1", name: "Barbell Squat", warmup: true, sets: 4, reps_range: "6-10", equipment: "barbell", notes: "Primary lower-body compound" },
+                            { id: "s2", name: "Romanian Deadlift", sets: 4, reps_range: "8-12", equipment: "barbell", notes: "Hamstring emphasis" },
+                            { id: "s3", name: "Walking Lunges", sets: 3, reps_range: "10", equipment: "dumbbells", notes: "Unilateral work" }
+                        ]
+                    },
+                    {
+                        day: "Sunday",
+                        focus: "Chest + Back",
+                        exercises: [
+                            { id: "su1", name: "Incline Barbell Press", sets: 4, reps_range: "6-10", equipment: "barbell/bench", notes: "Alternate angle for chest power" },
+                            { id: "su2", name: "Flat Dumbbell Press", sets: 3, reps_range: "8-12", equipment: "dumbbells", notes: "Controlled eccentrics" },
+                            { id: "su3", name: "Pull-ups / Chin-ups", sets: 4, reps_range: "6-10", equipment: "bodyweight/assistance", notes: "Vertical pull volume" },
+                            { id: "su4", name: "T-Bar Row", sets: 4, reps_range: "8-12", equipment: "machine/barbell", notes: "Horizontal pull power" }
+                        ]
+                    },
+                    {
+                        day: "Monday",
+                        focus: "Arms + Abs",
+                        exercises: [
+                            { id: "m1", name: "Close Grip Bench Press", sets: 4, reps_range: "6-10", equipment: "barbell/bench", notes: "Heavy triceps compound" },
+                            { id: "m2", name: "EZ Bar Curl", sets: 4, reps_range: "8-12", equipment: "EZ bar", notes: "Biceps heavy compound" },
+                            { id: "m3", name: "Skull Crushers", sets: 3, reps_range: "8-12", equipment: "EZ bar/dumbbell", notes: "Triceps isolation" },
+                            { id: "m4", name: "Incline Dumbbell Curl", sets: 3, reps_range: "8-12", equipment: "dumbbells/bench", notes: "Long-head biceps stretch" }
+                        ]
+                    }
+                ],
+
+                init() {
+                    // Load from localStorage on initialization
+                    const savedSchedule = localStorage.getItem('workout_schedule');
+                    const savedActiveDay = localStorage.getItem('workout_activeDay');
+                    const savedUserProfile = localStorage.getItem('workout_userProfile');
+                    const savedAccordionState = localStorage.getItem('workout_accordionOpen');
+                    const hasSeenSetup = localStorage.getItem('workout_hasSeenSetup');
+                    
+                    if (savedSchedule) {
+                        try {
+                            this.schedule = JSON.parse(savedSchedule);
+                        } catch (e) {
+                            console.warn('Could not parse saved schedule:', e);
+                        }
+                    }
+                    
+                    if (savedActiveDay) {
+                        this.activeDay = savedActiveDay;
+                    }
+                    
+                    if (savedUserProfile) {
+                        try {
+                            this.userProfile = JSON.parse(savedUserProfile);
+                        } catch (e) {
+                            console.warn('Could not parse saved user profile:', e);
+                        }
+                    }
+                    
+                    if (savedAccordionState) {
+                        try {
+                            this.accordionOpen = JSON.parse(savedAccordionState);
+                        } catch (e) {
+                            console.warn('Could not parse saved accordion state:', e);
+                        }
+                    }
+                    
+                    // Show first time setup if user hasn't seen it
+                    if (!hasSeenSetup) {
+                        this.showFirstTimeSetup = true;
+                    }
+                    
+                    // Initialize jQuery UI sortable after Alpine loads
+                    setTimeout(() => {
+                        this.initializeSortable();
+                    }, 100);
+                },
+
+                saveToStorage() {
+                    localStorage.setItem('workout_schedule', JSON.stringify(this.schedule));
+                    localStorage.setItem('workout_activeDay', this.activeDay);
+                    localStorage.setItem('workout_userProfile', JSON.stringify(this.userProfile));
+                    localStorage.setItem('workout_accordionOpen', JSON.stringify(this.accordionOpen));
+                },
+
+                initializeSortable() {
+                    const self = this;
+                    
+                    // Destroy existing sortable instances first
+                    $('.exercise-container').each(function() {
+                        if ($(this).hasClass('ui-sortable')) {
+                            $(this).sortable('destroy');
+                        }
+                    });
+                    
+                    // Wait for DOM to be ready then initialize
+                    setTimeout(() => {
+                        $('.exercise-container').each(function() {
+                            const dayName = $(this).attr('data-day');
+                            if (!dayName) return;
+                            
+                            $(this).sortable({
+                                items: '.exercise-accordion',
+                                handle: '.drag-handle',
+                                placeholder: 'ui-sortable-placeholder',
+                                helper: 'clone',
+                                tolerance: 'pointer',
+                                cursor: 'grabbing',
+                                opacity: 0.8,
+                                update: function(event, ui) {
+                                    self.handleSortUpdate(dayName);
+                                },
+                                start: function(event, ui) {
+                                    ui.helper.addClass('ui-sortable-helper');
+                                },
+                                stop: function(event, ui) {
+                                    ui.item.removeClass('ui-sortable-helper');
+                                }
+                            });
+                        });
+                    }, 50);
+                },
+
+                handleSortUpdate(dayName) {
+                    const dayObj = this.schedule.find(d => d.day === dayName);
+                    if (!dayObj) return;
+                    
+                    const container = $(`.exercise-container[data-day="${dayName}"]`);
+                    const newOrder = [];
+                    
+                    container.find('.exercise-accordion').each((index, element) => {
+                        const exerciseId = $(element).attr('data-exercise-id');
+                        const exercise = dayObj.exercises.find(ex => ex.id === exerciseId);
+                        if (exercise) {
+                            newOrder.push(exercise);
+                        }
+                    });
+                    
+                    dayObj.exercises = newOrder;
+                    this.updateExerciseIds();
+                    this.saveToStorage();
+                },
+
+                toggleAccordion(exerciseId) {
+                    this.accordionOpen[exerciseId] = !this.accordionOpen[exerciseId];
+                    this.saveToStorage();
+                },
+
+                updateReps(exercise, value) {
+                    if (exercise.hasOwnProperty('reps_range')) {
+                        exercise.reps_range = value;
+                    } else if (exercise.hasOwnProperty('reps')) {
+                        exercise.reps = value;
+                    } else if (exercise.hasOwnProperty('duration_sec')) {
+                        exercise.duration_sec = value;
+                    } else {
+                        exercise.reps_range = value;
+                    }
+                    this.saveToStorage();
+                },
+
+                getCurrentDay() {
+                    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                    const today = new Date();
+                    return days[today.getDay()];
+                },
+
+                completeFirstTimeSetup() {
+                    this.showFirstTimeSetup = false;
+                    localStorage.setItem('workout_hasSeenSetup', 'true');
+                    this.saveToStorage();
+                },
+
+                saveUserProfile() {
+                    this.showUserProfile = false;
+                    this.saveToStorage();
+                },
+
+                addExercise() {
+                    if (!this.newExercise.name.trim()) return;
+                    
+                    const targetDay = this.schedule.find(d => d.day === this.newExercise.day);
+                    if (targetDay) {
+                        const newId = `${this.newExercise.day.toLowerCase().substring(0, 2)}${targetDay.exercises.length + 1}`;
+                        
+                        targetDay.exercises.push({
+                            id: newId,
+                            name: this.newExercise.name,
+                            sets: parseInt(this.newExercise.sets),
+                            reps_range: this.newExercise.reps_range,
+                            equipment: this.newExercise.equipment,
+                            notes: this.newExercise.notes
+                        });
+                        
+                        this.showAddExercise = false;
+                        this.resetNewExercise();
+                        this.saveToStorage();
+                        
+                        // Reinitialize sortable for the updated container
+                        setTimeout(() => {
+                            this.initializeSortable();
+                        }, 100);
+                    }
+                },
+
+                removeExercise(day, index) {
+                    const dayObj = this.schedule.find(d => d.day === day);
+                    if (dayObj) {
+                        // Remove accordion state for deleted exercise
+                        const exerciseId = dayObj.exercises[index].id;
+                        delete this.accordionOpen[exerciseId];
+                        
+                        dayObj.exercises.splice(index, 1);
+                        this.updateExerciseIds();
+                        this.saveToStorage();
+                        
+                        // Reinitialize sortable
+                        setTimeout(() => {
+                            this.initializeSortable();
+                        }, 100);
+                    }
+                },
+
+                updateExerciseIds() {
+                    this.schedule.forEach(day => {
+                        day.exercises.forEach((exercise, index) => {
+                            const oldId = exercise.id;
+                            exercise.id = `${day.day.toLowerCase().substring(0, 2)}${index + 1}`;
+                            
+                            // Update accordion state with new ID
+                            if (this.accordionOpen[oldId]) {
+                                this.accordionOpen[exercise.id] = this.accordionOpen[oldId];
+                                delete this.accordionOpen[oldId];
+                            }
+                        });
+                    });
+                },
+
+                resetNewExercise() {
+                    this.newExercise = {
+                        name: '',
+                        sets: 3,
+                        reps_range: '8-12',
+                        equipment: '',
+                        notes: '',
+                        day: ''
+                    };
+                }
+            }
+        }
+    </script>
+</body>
+</html>
